@@ -294,10 +294,26 @@ public class AcceptanceTest {
                         extract().as(TokenResponse.class);
     }
 
-    public MemberResponse getMember(String email) {
-        // TODO 인증된 회원 자신의 정보만 불러오도록 수정
+    public void loginForNotExistMember(String email, String password) {
+        Map<String, String> params = new HashMap<>();
+        params.put("email", email);
+        params.put("password", password);
+        given().
+                body(params).
+                contentType(MediaType.APPLICATION_JSON_VALUE).
+                accept(MediaType.APPLICATION_JSON_VALUE).
+                when().
+                post("/oauth/token").
+                then().
+                log().all().
+                statusCode(HttpStatus.UNAUTHORIZED.value());
+    }
+
+    public MemberResponse getMember(String email, TokenResponse tokenResponse) {
         return
                 given().
+                        auth().
+                        oauth2(tokenResponse.getAccessToken()).
                         accept(MediaType.APPLICATION_JSON_VALUE).
                         when().
                         get("/members?email=" + email).
@@ -307,13 +323,14 @@ public class AcceptanceTest {
                         extract().as(MemberResponse.class);
     }
 
-    public void updateMember(MemberResponse memberResponse) {
-        // TODO 인증된 회원 자신의 정보만 수정하도록 수정
+    public void updateMember(MemberResponse memberResponse, TokenResponse tokenResponse) {
         Map<String, String> params = new HashMap<>();
         params.put("name", "NEW_" + TEST_USER_NAME);
         params.put("password", "NEW_" + TEST_USER_PASSWORD);
 
         given().
+                auth().
+                oauth2(tokenResponse.getAccessToken()).
                 body(params).
                 contentType(MediaType.APPLICATION_JSON_VALUE).
                 accept(MediaType.APPLICATION_JSON_VALUE).
@@ -324,10 +341,11 @@ public class AcceptanceTest {
                 statusCode(HttpStatus.OK.value());
     }
 
-    public void deleteMember(MemberResponse memberResponse) {
-        // 인증된 회원 자신의 정보만 삭제하도록 수정
-
-        given().when().
+    public void deleteMember(MemberResponse memberResponse, TokenResponse tokenResponse) {
+        given().
+                auth().
+                oauth2(tokenResponse.getAccessToken()).
+                when().
                 delete("/members/" + memberResponse.getId()).
                 then().
                 log().all().
